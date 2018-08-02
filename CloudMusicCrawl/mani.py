@@ -4,8 +4,8 @@ import os
 import json
 import re
 import time
-from proxy import *
-from wordanalyse import *
+from CloudMusicCrawl.proxy import *
+from CloudMusicCrawl.wordanalyse import *
 
 headers = {
     'Accept': '*/*',
@@ -47,13 +47,22 @@ def GetSongAuthor(songID):
 
 
 #从songID返回歌词字符串，API不稳定有可能会返回NULL
-def GetLyric(songID, titledel = True, artistdel=True, timedel=True):
+def GetLyric(songID, titledel = True, artistdel=True, timedel=True ,ends = '\n'):
     songname = GetSongName(songID)
     songartist = GetSongAuthor(songID)
     title = ''
     lyric_url = 'http://music.163.com/api/song/lyric?id=' + str(songID) + '&lv=1&kv=1&tv=-1'  # 歌词的api
     lyr = GetResponse(lyric_url,headers,cookies)
-    lyric = json.loads(lyr.text)['lrc']['lyric']  # 导入歌词文本
+    lyr_json = json.loads(lyr.text)
+    try:
+        if('lrc' in lyr_json):#假如有歌词
+            lyric = lyr_json['lrc']['lyric']  # 导入歌词文本
+        else:
+            print('songID:{} {} artist: {} has no lyric '.format(songID, songname, songartist), end=ends)
+            return ''
+    except Exception as e:
+        print('songID {} has something wrong'.format(songID))
+        print('Error Information:', e)
     if(not titledel):
         title = songname + '\n' + '歌手：' + GetSongAuthor(songID) + '\n'
     if (timedel):
@@ -62,21 +71,21 @@ def GetLyric(songID, titledel = True, artistdel=True, timedel=True):
     if (artistdel):
         pattern = re.compile(r'.+[:：].+')  # 去除艺术家
         lyric = re.sub(pattern, '', lyric)
-    print('get lyric from songID:{} {} artist: {} successfully'.format(songID,songname,songartist))
+    print('get lyric from songID:{} {} artist: {} successfully'.format(songID,songname,songartist),end = ends)
     return title + lyric.strip()
 
 
 #从albumID返回songID列表
-def GetAlbumSongID(albumID):
+def GetAlbumSongID(albumID,ends = '\n'):
     album_url = 'http://music.163.com/api/album/' + str(albumID)
     album = GetResponse(album_url, headers, cookies)
    # print('Response done')
     s = str(album.content, encoding='utf-8')
     album_json = json.loads(s)
     songIDlist = []
-    for each in album_json['album']['songs']:
+    for index, each in enumerate(album_json['album']['songs']):
         songIDlist.append(each['id'])
-    print('get songID from albumID:{} successfully'.format(albumID))
+    print('get songID from albumID:{} successfully'.format(albumID),end = ends)
     return songIDlist
 
 
@@ -93,8 +102,23 @@ def GetListSongID(ListID):
     print('get songID from songlistID:{} {} successfully'.format(ListID,listname))
     return songIDlist
 
+#从歌手返回所有专辑idlist
+def GetSingerAlbumID(singerID):
+    url = 'http://music.163.com/api/artist/albums/{}?id={}&limit=1024'.format(singerID,singerID)
+    res = GetResponse(url,headers,cookies)
+    list_json = json.loads(res.text)
+    albumIDlist = []
+    listname = list_json['hotAlbums']
+    for each in listname:
+        albumIDlist.append(each['id'])
+    return albumIDlist
+
+
 def AddLyric(file,text):
     fpath = os.path.join(file+'.txt')
     f = open(fpath,'a', encoding="utf-8")
     f.write(text)
     f.close()
+
+if __name__ == '__main__':
+    print(GetResponse('http://music.163.com/api/artist/albums/5771?id=5771&limit=1024',headers,cookies).text)

@@ -1,4 +1,4 @@
-from generator import *
+from CloudMusicCrawl.generator import *
 
 
 def main():

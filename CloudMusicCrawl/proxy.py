@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import requests
 import os
-from wordanalyse import Read_Txt,Save_Txt
+from CloudMusicCrawl.wordanalyse import Read_Txt,Save_Txt
 
 proxypath = os.path.join('doc','proxy.txt')
 
