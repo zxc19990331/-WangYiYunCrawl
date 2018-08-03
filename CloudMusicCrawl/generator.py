@@ -21,40 +21,68 @@ def generator():
 
 def Crawl(docut=True):
     path = ''
-    user_input = input('请输入文件保存的相对路径(如：firstdir/secdir)并确保为空，不填则在根目录下：\n')
+    user_input = input('请输入文件保存的相对路径(如：firstdir/secdir)，存放的文件夹会自动生成，不填则默认创建test文件夹：\n')
     if user_input:
         if (isAddress(user_input)):
             path = os.path.join(user_input)
         else:
             print('文件路径不合法，请重新输入')
+            return
     else:
-        path = os.path.join('')
-    print('保存地址为：.../', path)
-    makedir(path)
+        path = os.path.join('test')
+
     location = input('请输入要爬的歌词所在的位置：1 - 歌单 2 - 专辑 3 - 歌曲 4 - 歌手:\n')
+
     if (location):
         if (location == '1'):
-            ID = input('请输入歌单ID:\n')
-            songIDlist = GetListSongID(ID)
+            IDs = input('请输入歌单ID，可一次性输入多个，用空格隔开:\n') #输入多个ID
+            IDlist = IDs.split()
+            for index,ID in enumerate(IDlist):
+                songIDlist = GetListSongID(ID)
+                Name = 'playlist_{}_{}'.format(ID,GetListName(ID))
+                GetInfo(songIDlist, path, Name, docut)
+                print('已完成歌单{}/{}'.format(index + 1, len(IDlist)))
         elif (location == '2'):
-            ID = input('请输入专辑ID:\n')
-            songIDlist = GetAlbumSongID(ID)
+            IDs = input('请输入专辑ID，可一次性输入多个，用空格隔开:\n')
+            IDlist = IDs.split()
+            for index, ID in enumerate(IDs.split()):
+                songIDlist = GetAlbumSongID(ID)
+                Name = 'album_{}_{}'.format(ID,GetAlbumName(ID))
+                GetInfo(songIDlist, path, Name, docut)
+                print('已完成专辑{}/{}'.format(index + 1, len(IDlist)))
         elif (location == '3'):
-            ID = input('请输入歌曲ID:\n')
-            songIDlist = [ID]
+            IDs = input('请输入歌曲ID，可一次性输入多个，用空格隔开:\n')
+            songIDlist = IDs.split()
+            for index, ID in enumerate(songIDlist):
+                Name = 'song_{}_{}'.format(ID, GetSongName(ID))
+                GetInfo(songIDlist, path, Name, docut)
+                print('已完成专辑任务{}/{}'.format(index + 1, len(songIDlist)))
         elif (location == '4'):
-            ID = input('请输入歌手ID:\n')
-            songIDlist = []
-            Albumlist = GetSingerAlbumID(ID)
-            length = len(Albumlist)
-            for index, each in enumerate(Albumlist):
-                songIDlist.extend(GetAlbumSongID(each, ''))
-                print(' 已完成{}/{}'.format(index, length))
+            IDs = input('请输入歌手ID，可一次性输入多个，用空格隔开:\n')
+            IDlist = IDs.split()
+            for index, ID in enumerate(IDs.split()):
+                songIDlist = []
+                Albumlist = GetSingerAlbumID(ID)
+                Name = 'singer_{}_{}'.format(ID,GetSingerName(ID))
+                length = len(Albumlist)
+                for _index, each in enumerate(Albumlist):
+                    songIDlist.extend(GetAlbumSongID(each, ''))
+                    print(' 已完成{}/{}'.format(_index + 1, length))
+                GetInfo(songIDlist, path, Name, docut)
+                print('已完成歌手{}/{}'.format(index + 1, len(IDlist)))
         else:
             return
     else:
         return
 
+
+def GetInfo(songIDlist, path, Name,docut):
+    Name = validateTitle(Name)
+    path += '/' + Name
+    makedir(path)
+    print('保存地址为：.../', path)
+    time.sleep(1)
+    '''
     choose = input('请输入保存歌词是否删除标题、歌手（1/0 默认1删除）是否删除编曲、填词人信息（1/0 默认1删除）是否删除歌曲时间格式（1/0 默认1删除）\n')
     if (choose):
         try:
@@ -69,28 +97,35 @@ def Crawl(docut=True):
         one = 1
         two = 1
         three = 1
+    '''
     length = len(songIDlist)
     for index, each in enumerate(songIDlist):
-        txt = GetLyric(each, one, two, three, '')  # 使输出信息不换行
-        print(' 已完成 {}/{}'.format(index + 1, length))
-        name = str(each) + '_' + GetSongName(each) + '.txt'
-        Save(path + '/' + name, txt)
+        try:
+            txt = GetLyric(each, 1, 1, 1, '')  # 使输出信息不换行
+            print(' 已完成 {}/{}'.format(index + 1, length))
+            if txt != '':
+                name = GetSongName(each) + '.txt'
+                Save(path + '/' + name, txt)
+        except Exception as e:
+            print(e)
+            pass
+
     total = ReadTxt(path)
     name = 'Total_{}_songs_lyrics_'.format(length) + GetTime() + '.txt'
     Save(path + '/' + name, total)
     print('总歌词保存成功:{}'.format(path + '/' + name))
     if (docut):
-        Cut(path + '/' + name)
+        Cut(path + '/' + name, Name)
 
 
-def Cut(file):
+def Cut(file, name = ''):
     print('注：词频统计使用了部分停词表（如你、我、他、了、着、的 等），可在 doc/ignorelist.txt自行修改')
     tags = WordCut(file)
     wordcut = OutputMax(file)
     Max = PrintMax(wordcut)
     MaxTagEx = PrintMaxTag(wordcut)
     makedir('results')
-    newname = 'results/' + GetTime() + '_result.txt'
+    newname = 'results/' + GetTime() + '_{}_result.txt'.format(name)
     Save(newname, Max)
     print('词频统计保存成功：.../{}'.format(newname))
     print('前15个高频词示例：\n', MaxTagEx)

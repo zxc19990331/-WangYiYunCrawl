@@ -16,7 +16,7 @@ def DeleteProxy(proxy):
 def GetResponse(url, header={}, cookie={}):
     currentproxy = Read_Txt(proxypath)
     while True:
-        retry_count = 1
+        retry_count = 5
         while retry_count > 0:
             try:
                 html = requests.get(url, headers=header, cookies=cookie,

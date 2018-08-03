@@ -35,7 +35,7 @@ def Read_Txt(txt):
 
 # 将字符串写入txt
 def Save_Txt(file, txt):
-    fpath = os.path.join(file + '.txt')
+    fpath = os.path.join(file)
     f = open(fpath, 'w', encoding="utf-8")
     f.write(txt)
 
